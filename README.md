@@ -492,7 +492,7 @@ ECS 콘솔 → 클러스터 → ci-cd-demo-cluster → 서비스 탭 → ci-cd-d
 | 설정 항목 | 값 |
 |----------|-----|
 | 배포 전략 | **블루/그린** |
-| Bake time | **5분** |
+| Bake time | **10분** |
 
 ### Step 3: 로드 밸런싱 설정
 
@@ -506,7 +506,19 @@ ECS 콘솔 → 클러스터 → ci-cd-demo-cluster → 서비스 탭 → ci-cd-d
 | 그린 대상 그룹 | `ci-cd-demo-green-tg` |
 | **로드 밸런서 역할** | `ecsInfrastructureRoleForLoadBalancers` |
 
-### Step 4: 업데이트 클릭
+### Step 4: 배포 실패 감지 설정
+
+> 헬스체크가 계속 실패하면 ECS가 새 Task를 무한 재시도합니다.
+> **배포 회로 차단기(Circuit Breaker)**를 활성화하면 일정 횟수 실패 후 자동으로 롤백됩니다.
+
+같은 서비스 업데이트 화면에서:
+
+| 설정 항목 | 값 |
+|----------|-----|
+| 배포 실패 감지 | **배포 회로 차단기 사용** 활성화 |
+| 롤백 | **체크** |
+
+### Step 5: 업데이트 클릭
 
 ### Blue/Green 배포 라이프사이클
 
@@ -517,7 +529,7 @@ SCALE_UP                 Green 환경 생성
        ↓
 PRODUCTION_TRAFFIC_SHIFT 프로덕션 트래픽 전환
        ↓
-BAKE_TIME                안정화 대기 (5분)
+BAKE_TIME                안정화 대기 (10분)
        ↓
 CLEAN_UP                 Blue 환경 정리
 ```
@@ -1040,7 +1052,13 @@ git commit -m "alarm test: 50% error rate"
 git push origin main
 ```
 
-#### Step 4: 배포 완료 후 트래픽 발생
+#### Step 4: Bake Time 중에 트래픽 발생
+
+> **중요**: 반드시 **Bake Time 중에** 실행해야 롤백이 발생합니다.
+> Bake Time이 끝난 후에 트래픽을 보내면 롤백되지 않습니다.
+>
+> ECS 콘솔 → 클러스터 → ci-cd-demo-cluster → 서비스 → ci-cd-demo-service → **배포** 탭에서
+> 배포 상태가 **BAKE_TIME** 인지 확인한 후 아래 명령을 실행하세요.
 
 ```bash
 for i in $(seq 1 100); do
@@ -1214,7 +1232,7 @@ aws cloudformation list-stacks \
 
 ### Q: Bake Time이란?
 
-**A**: 트래픽 전환 후 Blue 환경을 유지하는 시간입니다. 이 시간 동안 문제가 발생하면 즉시 롤백할 수 있습니다. 권장값: 5분
+**A**: 트래픽 전환 후 이전 환경을 유지하는 시간입니다. 이 시간 동안 문제가 발생하면 즉시 롤백할 수 있습니다. 권장값: 10분
 
 ### Q: 비용은 얼마나 드나요?
 
